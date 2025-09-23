@@ -1,5 +1,6 @@
 # Python cache
 __pycache__/
+.mypy_cache/
 *.py[cod]
 *.pyo
 *.pyd
@@ -29,6 +30,7 @@ dist/
 
 # Logs
 *.log
+*.json
 
 # Results & temporary
 results/screenshots/

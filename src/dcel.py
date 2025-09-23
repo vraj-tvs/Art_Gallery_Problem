@@ -9,8 +9,10 @@ src/dcel.py
 from __future__ import annotations
 from typing import Optional, List, Tuple
 
+
 class Vertex:
     """A DCEL vertex."""
+
     def __init__(self, x: float, y: float, idx: int) -> None:
         self.x: float = float(x)
         self.y: float = float(y)
@@ -23,8 +25,10 @@ class Vertex:
     def __repr__(self) -> str:
         return f"V{self.idx}({self.x:.3f},{self.y:.3f})"
 
+
 class HalfEdge:
     """A half-edge in DCEL."""
+
     def __init__(self) -> None:
         self.origin: Optional[Vertex] = None
         self.twin: Optional[HalfEdge] = None
@@ -37,8 +41,10 @@ class HalfEdge:
         n = self.next.origin.idx if self.next and self.next.origin else None
         return f"HE(origin={o}, next_origin={n})"
 
+
 class Face:
     """A face in DCEL."""
+
     def __init__(self, fid: int) -> None:
         self.fid: int = fid
         self.outer_component: Optional[HalfEdge] = None
@@ -47,8 +53,10 @@ class Face:
     def __repr__(self) -> str:
         return f"Face({self.fid})"
 
+
 class DCEL:
     """Minimal DCEL implementation for a simple polygon."""
+
     def __init__(self) -> None:
         self.vertices: List[Vertex] = []
         self.half_edges: List[HalfEdge] = []

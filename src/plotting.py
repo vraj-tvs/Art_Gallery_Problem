@@ -5,7 +5,7 @@ from src.dcel import DCEL
 
 def plot_pipeline(dcel: DCEL, triangles, colors, guards, show=True, save_path=None):
     pts = dcel.coords_list()
-    fig, ax = plt.subplots(figsize=(6, 6))
+    fig, ax = plt.subplots(figsize=(10, 14))
 
     # Polygon boundary
     poly_idx = dcel.boundary_vertex_indices()

@@ -6,7 +6,7 @@ src/triangulation.py
 - For degenerate numerical situations a fallback is provided (best-effort).
 """
 
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 from src.dcel import DCEL
 from src.utils import orientation, signed_area, is_point_in_triangle, EPS
 
