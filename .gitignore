@@ -1,41 +1,144 @@
-# Python cache
+# =============================================================================
+# Python
+# =============================================================================
 __pycache__/
-.mypy_cache/
 *.py[cod]
-*.pyo
-*.pyd
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Virtual environments
-.env/
-.venv/
+# =============================================================================
+# Virtual Environments
+# =============================================================================
 venv/
-ENV/
 env/
-*.env
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.env/
 
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
-
-# IDE configs
+# =============================================================================
+# IDE and Editors
+# =============================================================================
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
 
-# Build / dist
-build/
-dist/
-*.egg-info/
-.eggs/
-
-# Logs
-*.log
-*.json
-
-# Results & temporary
-results/screenshots/
-results/demo_video.mp4
-
-# OS files
+# =============================================================================
+# Operating System Files
+# =============================================================================
+# macOS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# Windows
+ehthumbs.db
 Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# =============================================================================
+# Web Framework (Flask)
+# =============================================================================
+instance/
+.webassets-cache
+.flaskenv
+
+# =============================================================================
+# Computational Geometry Project Specific
+# =============================================================================
+# Generated visualizations and plots
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
+
+# Test outputs
+test_outputs/
+examples_output/
+
+# Debug files
+debug_*.txt
+debug_*.log
+
+# Polygon data files (if you want to exclude sample data)
+# polygons/
+# examples/
+
+# =============================================================================
+# Logs and Debugging
+# =============================================================================
+*.log
+logs/
+*.log.*
+
+# =============================================================================
+# Temporary Files
+# =============================================================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+
+# =============================================================================
+# Development and Testing
+# =============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# =============================================================================
+# Documentation
+# =============================================================================
+docs/_build/
+.readthedocs.yml
+
+# =============================================================================
+# Configuration Files (if containing secrets)
+# =============================================================================
+# .env
+# config.local.py
+# secrets.json

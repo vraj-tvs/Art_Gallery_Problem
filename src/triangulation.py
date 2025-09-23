@@ -29,12 +29,9 @@ def triangulate_ear_clipping(dcel: DCEL) -> List[Tuple[int, int, int]]:
         return []
     # get boundary order (vertex indices)
     poly = dcel.boundary_vertex_indices()
-    # Ensure coordinates are CCW
-    coords = [pts[i] for i in poly]
-    coords = ensure_ccw(coords)
-    if coords != [pts[i] for i in poly]:
-        # need to reverse poly indices
-        poly = list(reversed(poly))
+    # Polygon should already be CCW from backend preprocessing
+    print(f"Triangulation Debug - Polygon indices: {poly}")
+    print(f"Triangulation Debug - Polygon points: {[pts[i] for i in poly]}")
 
     # helper structures for linked-list removal
     prev = {poly[i]: poly[i - 1] for i in range(len(poly))}
@@ -43,7 +40,8 @@ def triangulate_ear_clipping(dcel: DCEL) -> List[Tuple[int, int, int]]:
 
     def is_convex(a_idx: int, b_idx: int, c_idx: int) -> bool:
         a, b, c = pts[a_idx], pts[b_idx], pts[c_idx]
-        return orientation(a, b, c) > EPS  # left turn -> convex for CCW polygon
+        # In canvas coordinates (Y down), right turn is convex for CCW polygon
+        return orientation(a, b, c) < -EPS  # right turn -> convex for CCW polygon in canvas coords
 
     def any_point_in_triangle(a_idx: int, b_idx: int, c_idx: int) -> bool:
         a, b, c = pts[a_idx], pts[b_idx], pts[c_idx]
@@ -79,7 +77,9 @@ def triangulate_ear_clipping(dcel: DCEL) -> List[Tuple[int, int, int]]:
             if any_point_in_triangle(i_prev, i, i_next):
                 continue
             # it's an ear -> clip it
-            triangles.append((i_prev, i, i_next))
+            triangle = (i_prev, i, i_next)
+            triangles.append(triangle)
+            print(f"Triangulation Debug - Clipped ear: {triangle} at vertices {[pts[j] for j in triangle]}")
             # remove i
             remaining.remove(i)
             # relink neighbors
@@ -104,7 +104,9 @@ def triangulate_ear_clipping(dcel: DCEL) -> List[Tuple[int, int, int]]:
     # final triangle
     last = list(remaining)
     if len(last) == 3:
-        triangles.append((last[0], last[1], last[2]))
+        final_triangle = (last[0], last[1], last[2])
+        triangles.append(final_triangle)
+        print(f"Triangulation Debug - Final triangle: {final_triangle} at vertices {[pts[j] for j in final_triangle]}")
 
     # Ensure triangles are CCW (they should be by construction)
     return triangles
