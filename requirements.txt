@@ -1,0 +1,15 @@
+# Core Python requirements for Computational Geometry project
+
+# Numerical + geometry
+numpy>=1.24
+shapely>=2.0       # for geometric operations (optional, useful for validation)
+
+# Visualization
+matplotlib>=3.7
+
+# Utilities
+networkx>=3.1      # for dual graph / debugging visualization
+tqdm>=4.65         # for progress bars if needed
+
+# Development & Testing
+pytest>=7.4
