@@ -1,6 +1,7 @@
-## Art Gallery Problem — Interactive Visualization
+## 🎨 Art Gallery Problem — Interactive Visualization
 
 GroupID-23 (22114047_22114081_22114098) - Khushal Agrawal, Rushit Pancholi and Vraj Tamkuwala
+
 Date: 25 Sept, 2025
 
 This project provides an interactive visualization of the methodology described in `Final_report.pdf` (included). It explores the Art Gallery/Street Light Placement problem on a simple polygon.
@@ -15,14 +16,18 @@ It walks through:
 - 3-coloring of the triangulation
 - Vertex guards selection and display
 
-### Run Options
+### 🚀 Run Options
+
 You can use either a browser-based app (Streamlit) or a desktop GUI (Tkinter).
 
-### Setup
-Prerequisites:
+### ⚙️ Setup
+
+Prerequisites 🔍:
+
 - Python 3.10+
 
 Create a virtual environment (recommended) and install dependencies:
+
 ```bash
 # From this folder
 python -m venv .venv
@@ -31,41 +36,49 @@ pip install -r requirements.txt
 ```
 
 Alternatively, with conda:
+
 ```bash
 conda create -n artgallery python=3.12 -y
 conda activate artgallery
 pip install -r requirements.txt
 ```
 
-### Start the Web App (Streamlit)
+### 🌐 Start the Web App (Streamlit)
+
 ```bash
 # From this folder
 python -m streamlit run src/webui/app.py
 ```
+
 Open the local URL printed in the terminal (typically `http://localhost:8501`).
 
 Usage in the web UI:
+
 - Set the number of vertices and click "Generate Polygon".
 - Step through: Trapezoidalisation → Monotone Partitioning → Triangulation → Dual Graph → 3 Coloring → Vertex Guards.
 - Click "Reset Canvas" to start over.
 
 Or use the unified launcher:
+
 ```bash
 python main.py --web --port 8501
 ```
 
-### Start the Desktop GUI (Tkinter)
+### 🖥️ Start the Desktop GUI (Tkinter)
+
 ```bash
 # From this folder
 python main.py --desktop
 ```
 
 You can also use the helper script to set up a venv and run:
+
 ```bash
 ./setup_and_run.sh --web   # or --desktop
 ```
 
-### Project Structure
+### 📁 Project Structure
+
 ```
 Art_Gallery_Problem/
 ├── main.py                     # Main entry point with CLI launcher
@@ -95,7 +108,8 @@ Art_Gallery_Problem/
         └── README.md       # Web UI specific documentation
 ```
 
-### UI flow and naming (per the PDF)
+### 🎯 UI flow and naming (per the PDF)
+
 - 1. Generate Polygon
 - 2. Trapezoidalization
 - 3. Monotone Partitioning
@@ -106,7 +120,8 @@ Art_Gallery_Problem/
 
 The web UI mimics a canvas via Matplotlib and follows the pipeline described in the PDF.
 
-### Troubleshooting
-- If Streamlit doesn’t open automatically, copy the "Local URL" shown in the terminal into your browser.
+### 🔧 Troubleshooting
+
+- If Streamlit doesn't open automatically, copy the "Local URL" shown in the terminal into your browser.
 - If rendering looks odd, ensure you have a recent Matplotlib installed.
 - On macOS with multiple Python installs, ensure the interpreter that installed dependencies runs the commands.
