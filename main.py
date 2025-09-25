@@ -1,37 +1,89 @@
-# main.py
-from src.dcel import DCEL
-from src.triangulation import triangulate_ear_clipping
-from src.coloring import three_color_vertices, choose_guards_from_coloring
-from src.plotting import plot_pipeline
-from src.io_utils import read_polygon_from_json
+#!/usr/bin/env python3
 
-from argparse import ArgumentParser
+# Single entry point to run the project from this folder.
+
+# GroupID-23 (22114047_22114081_22114098) - Khushal Agrawal, Rushit Pancholi and Vraj Tamkuwala
+# Date: 25 Sept, 2025
+# main.py - CLI to launch Streamlit web UI or Tkinter desktop UI.
+
+# Usage:
+#   - Desktop (Tkinter):  python main.py --desktop
+#   - Web (Streamlit):    python main.py --web [--port 8501]
+#
+
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
 
 
-def run_demo(json_filepath: str):
-    # Load polygon from JSON
-    polygon = read_polygon_from_json(json_filepath)
-    dcel = DCEL.from_polygon(polygon)
-    print("Created DCEL:", dcel)
+def run_web_ui(port: int) -> int:
+    app_path = os.path.join(os.path.dirname(__file__), "webui", "app.py")
 
-    triangles = triangulate_ear_clipping(dcel)
-    print("Num of Triangles:", len(triangles))
+    try:
+        import streamlit  # type: ignore
+    except Exception as exc:  # pragma: no cover
+        print("Streamlit is not installed. Please install dependencies first:")
+        print("  pip install -r ./requirements.txt")
+        print(f"Details: {exc}")
+        return 1
 
-    colors = three_color_vertices(triangles)
-    # print("Colors:", colors)
+    project_root = os.path.abspath(os.path.dirname(__file__))
+    cmd = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        app_path,
+        "--server.port",
+        str(port),
+    ]
+    return subprocess.call(cmd, cwd=project_root)
 
-    guards = choose_guards_from_coloring(colors)
-    print(f"List of {len(guards)} Guard(s):", guards)
 
-    plot_pipeline(dcel, triangles, colors, guards, show=True)
+def run_desktop_gui() -> int:
+    try:
+        from src.controller import main as desktop_main
+    except Exception as exc:  # pragma: no cover
+        print(
+            "Failed to import desktop GUI. Ensure you are running from the project root."
+        )
+        print(f"Details: {exc}")
+        return 1
+
+    try:
+        desktop_main()
+        return 0
+    except SystemExit as se:  # pragma: no cover
+        return int(getattr(se, "code", 0) or 0)
+    except Exception as exc:  # pragma: no cover
+        print(f"Desktop GUI crashed: {exc}")
+        return 1
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Art Gallery launcher")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--web", action="store_true", help="Run the Streamlit web UI (default)"
+    )
+    mode.add_argument(
+        "--desktop", action="store_true", help="Run the Tkinter desktop UI"
+    )
+    parser.add_argument(
+        "--port", type=int, default=8501, help="Port for web UI (default: 8501)"
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv or sys.argv[1:])
+    if args.desktop:
+        return run_desktop_gui()
+    return run_web_ui(port=args.port)
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description="Polygon Triangulation and Guard Placement")
-    parser.add_argument(
-        "--json_filepath",
-        type=str,
-        help="Path to the JSON file containing polygon vertices",
-    )
-    args = parser.parse_args()
-    run_demo(args.json_filepath)
+    raise SystemExit(main())

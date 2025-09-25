@@ -1,112 +1,198 @@
-"""
-src/triangulation.py
+# Triangulation of y-monotone pieces using stack-based algorithm.
 
-- Using ear-clipping implemented on the DCEL's vertex indices. The algorithm references only the DCEL vertex coordinates.
-- Complexity is O(n^2) worst-case (common and ok for modest polygons; can be optimized later).
-- For degenerate numerical situations a fallback is provided (best-effort).
-"""
+# GroupID-23 (22114047_22114081_22114098) - Khushal Agrawal, Rushit Pancholi and Vraj Tamkuwala
+# Date: 25 Sept, 2025
+# triangulation.py - Inserts diagonals (rendered dotted) to triangulate faces.
 
-from typing import List, Tuple
-from src.dcel import DCEL
-from src.utils import orientation, signed_area, is_point_in_triangle, EPS
+import time
 
 
-def ensure_ccw(points: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
-    if signed_area(points) < 0:
-        return list(reversed(points))
-    return points
+class TriangulationApp:
+    def __init__(self, canvas, dcel, monotone_app):
+        self.canvas = canvas
+        self.dcel = dcel
+        self.monotone_app = monotone_app
+        self.canvas_width = 500
+        self.canvas_height = 500
+        self.padding = 50
+        self.origin_x = self.padding
+        self.origin_y = self.canvas_height - self.padding
 
+    def triangulate_polygon(self):
+        pending_diagonals = []
+        for face in self.dcel.faces:
+            looping_edge = face.outer_half_edge
+            starting_vertex = looping_edge.origin
+            vertex_list = []
 
-def triangulate_ear_clipping(dcel: DCEL) -> List[Tuple[int, int, int]]:
-    """
-    Triangulate a simple polygon represented in 'dcel' using ear-clipping.
-    Returns list of triangles as tuples of vertex indices (i, j, k) in CCW order.
-    Uses only the DCEL vertices as requested.
-    """
-    pts = dcel.coords_list()
-    n = len(pts)
-    if n < 3:
-        return []
-    # get boundary order (vertex indices)
-    poly = dcel.boundary_vertex_indices()
-    # Polygon should already be CCW from backend preprocessing
-    print(f"Triangulation Debug - Polygon indices: {poly}")
-    print(f"Triangulation Debug - Polygon points: {[pts[i] for i in poly]}")
+            while True:
+                vertex_list.append(looping_edge.origin)
+                looping_edge = looping_edge.next
+                if looping_edge.origin == starting_vertex:
+                    break
 
-    # helper structures for linked-list removal
-    prev = {poly[i]: poly[i - 1] for i in range(len(poly))}
-    nextv = {poly[i]: poly[(i + 1) % len(poly)] for i in range(len(poly))}
-    remaining = set(poly)
+            sorted_vertices = sorted(vertex_list, key=lambda v: (-v.y, v.x))
+            top_vertex = sorted_vertices[0]
+            bottom_vertex = sorted_vertices[-1]
 
-    def is_convex(a_idx: int, b_idx: int, c_idx: int) -> bool:
-        a, b, c = pts[a_idx], pts[b_idx], pts[c_idx]
-        # In canvas coordinates (Y down), right turn is convex for CCW polygon
-        return orientation(a, b, c) < -EPS  # right turn -> convex for CCW polygon in canvas coords
+            chain1 = []
+            chain2 = []
 
-    def any_point_in_triangle(a_idx: int, b_idx: int, c_idx: int) -> bool:
-        a, b, c = pts[a_idx], pts[b_idx], pts[c_idx]
-        for v in remaining:
-            if v in (a_idx, b_idx, c_idx):
-                continue
-            p = pts[v]
-            if is_point_in_triangle(p, a, b, c):
-                return True
-        return False
+            while vertex_list[0] != top_vertex:
+                temp_vertex = vertex_list[0]
+                vertex_list.remove(temp_vertex)
+                vertex_list.append(temp_vertex)
 
-    triangles: List[Tuple[int, int, int]] = []
-    # Precompute vertex ordering to quickly find ears: O(n^2) ear-clipping (acceptable for moderate n)
-    if len(remaining) == 3:
-        a, b, c = list(remaining)
-        triangles.append((a, b, c))
-        return triangles
+            switching = False
+            chain2.append(top_vertex)
+            for k in vertex_list:
+                if not switching:
+                    chain1.append(k)
+                else:
+                    chain2.append(k)
+                if k == bottom_vertex:
+                    switching = True
+            chain2.append(bottom_vertex)
 
-    # Keep scanning for ears
-    scan_order = list(poly)  # initial ordering for scanning
-    while len(remaining) > 3:
-        clipped = False
-        # iterate over a copy of remaining in polygon order
-        for v in list(scan_order):
-            if v not in remaining:
-                continue
-            i = v
-            i_prev = prev[i]
-            i_next = nextv[i]
-            if not is_convex(i_prev, i, i_next):
-                continue
-            # check if triangle contains any other remaining vertex
-            if any_point_in_triangle(i_prev, i, i_next):
-                continue
-            # it's an ear -> clip it
-            triangle = (i_prev, i, i_next)
-            triangles.append(triangle)
-            print(f"Triangulation Debug - Clipped ear: {triangle} at vertices {[pts[j] for j in triangle]}")
-            # remove i
-            remaining.remove(i)
-            # relink neighbors
-            prev[i_next] = i_prev
-            nextv[i_prev] = i_next
-            # update scan_order to start from prev (heuristic)
-            scan_order = [i_prev] + scan_order
-            clipped = True
-            break
-        if not clipped:
-            # Numerical or degeneracy issue. As a fallback, force triangulation by connecting ears without strict checks.
-            # Find any triple and cut it (best-effort).
-            rem_list = list(remaining)
-            a_idx = rem_list[0]
-            b_idx = nextv[a_idx]
-            c_idx = nextv[b_idx]
-            triangles.append((a_idx, b_idx, c_idx))
-            remaining.remove(b_idx)
-            prev[c_idx] = a_idx
-            nextv[a_idx] = c_idx
+            chain1 = sorted(chain1, key=lambda v: (-v.y, v.x))
+            chain2 = sorted(chain2, key=lambda v: (-v.y, v.x))
 
-    # final triangle
-    last = list(remaining)
-    if len(last) == 3:
-        final_triangle = (last[0], last[1], last[2])
-        triangles.append(final_triangle)
-        print(f"Triangulation Debug - Final triangle: {final_triangle} at vertices {[pts[j] for j in final_triangle]}")
+            Q = []
+            Q.append(sorted_vertices[0])
+            sorted_vertices.pop(0)
+            Q.append(sorted_vertices[0])
+            sorted_vertices.pop(0)
 
-    # Ensure triangles are CCW (they should be by construction)
-    return triangles
+            left_chain = []
+            right_chain = []
+
+            if len(chain1) > 2 and len(chain2) > 2:
+                minx1 = 1e9
+                minx2 = 1e9
+                for k in range(1, len(chain1) - 1):
+                    minx1 = min(chain1[k].x, minx1)
+                for k in range(1, len(chain2) - 1):
+                    minx2 = min(chain2[k].x, minx2)
+                if minx1 < minx2:
+                    left_chain = chain1
+                    right_chain = chain2
+                else:
+                    left_chain = chain2
+                    right_chain = chain1
+            elif len(chain1) > 2:
+                v1 = top_vertex
+                v2 = chain1[1]
+                v3 = bottom_vertex
+                if (
+                    (v3.y - v1.y) / (v3.x - v1.x) > 0
+                    and v2.y - v1.y - ((v3.y - v1.y) / (v3.x - v1.x)) * (v2.x - v1.x)
+                    <= 0
+                ) or (
+                    (v3.y - v1.y) / (v3.x - v1.x) < 0
+                    and v2.y - v1.y - ((v3.y - v1.y) / (v3.x - v1.x)) * (v2.x - v1.x)
+                    >= 0
+                ):
+                    right_chain = chain1
+                    left_chain = chain2
+                else:
+                    right_chain = chain2
+                    left_chain = chain1
+            else:
+                v1 = top_vertex
+                v2 = chain2[1]
+                v3 = bottom_vertex
+                if (
+                    (v3.y - v1.y) / (v3.x - v1.x) > 0
+                    and v2.y - v1.y - ((v3.y - v1.y) / (v3.x - v1.x)) * (v2.x - v1.x)
+                    <= 0
+                ) or (
+                    (v3.y - v1.y) / (v3.x - v1.x) < 0
+                    and v2.y - v1.y - ((v3.y - v1.y) / (v3.x - v1.x)) * (v2.x - v1.x)
+                    >= 0
+                ):
+                    right_chain = chain2
+                    left_chain = chain1
+                else:
+                    right_chain = chain1
+                    left_chain = chain2
+
+            left_chain.pop(0)
+            left_chain.pop()
+            right_chain.pop(0)
+            right_chain.pop()
+
+            for k in sorted_vertices:
+                if k in left_chain and Q[-1] in left_chain:
+                    Q.append(k)
+                    while True and len(Q) >= 3:
+                        v1, v2, v3 = Q[-1], Q[-2], Q[-3]
+                        if (
+                            (v3.y - v1.y) / (v3.x - v1.x) > 0
+                            and v2.y
+                            - v1.y
+                            - ((v3.y - v1.y) / (v3.x - v1.x)) * (v2.x - v1.x)
+                            <= 0
+                        ) or (
+                            (v3.y - v1.y) / (v3.x - v1.x) < 0
+                            and v2.y
+                            - v1.y
+                            - ((v3.y - v1.y) / (v3.x - v1.x)) * (v2.x - v1.x)
+                            >= 0
+                        ):
+                            break
+                        else:
+                            if (v1, v3) not in self.dcel.existing_lines:
+                                self.monotone_app.draw_diagonal_only(v1, v3)
+                                pending_diagonals.append((v1, v3))
+                            u = Q.pop()
+                            Q.pop()
+                            Q.append(u)
+                elif k in right_chain and Q[-1] in right_chain:
+                    Q.append(k)
+                    while True and len(Q) >= 3:
+                        v1, v2, v3 = Q[-1], Q[-2], Q[-3]
+                        if (
+                            (v3.y - v1.y) / (v3.x - v1.x) < 0
+                            and v2.y
+                            - v1.y
+                            - ((v3.y - v1.y) / (v3.x - v1.x)) * (v2.x - v1.x)
+                            <= 0
+                        ) or (
+                            (v3.y - v1.y) / (v3.x - v1.x) > 0
+                            and v2.y
+                            - v1.y
+                            - ((v3.y - v1.y) / (v3.x - v1.x)) * (v2.x - v1.x)
+                            >= 0
+                        ):
+                            break
+                        else:
+                            if (v1, v3) not in self.dcel.existing_lines:
+                                self.monotone_app.draw_diagonal_only(v1, v3)
+                                pending_diagonals.append((v1, v3))
+                            u = Q.pop()
+                            Q.pop()
+                            Q.append(u)
+                else:
+                    Q.pop(0)
+                    while len(Q) >= 2:
+                        if (Q[0], k) not in self.dcel.existing_lines:
+                            self.monotone_app.draw_diagonal_only(Q[0], k)
+                            pending_diagonals.append((Q[0], k))
+                        Q.pop(0)
+                    if (Q[0], k) not in self.dcel.existing_lines:
+                        # draw dotted/dashed gray line if possible: not supported in Tk directly
+                        self.monotone_app.canvas.create_line(
+                            self.monotone_app.origin_x + Q[0].x,
+                            self.monotone_app.origin_y - Q[0].y,
+                            self.monotone_app.origin_x + k.x,
+                            self.monotone_app.origin_y - k.y,
+                            fill="#a0a0a0",
+                            dash=(4, 3),
+                        )
+                        self.monotone_app.canvas.update()
+                        time.sleep(0.4)
+                        pending_diagonals.append((Q[0], k))
+                    Q.append(k)
+
+        for v1, v2 in pending_diagonals:
+            self.dcel.add_diagonal(v1, v2)

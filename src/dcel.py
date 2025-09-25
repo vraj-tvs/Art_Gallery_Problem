@@ -1,108 +1,233 @@
-"""
-src/dcel.py
+# GroupID-23 (22114047_22114081_22114098) - Khushal Agrawal, Rushit Pancholi and Vraj Tamkuwala
+# Date: 25 Sept, 2025
+# dcel.py - Doubly Connected Edge List (DCEL) data structure and helpers
 
-- This is a minimal DCEL sufficient to represent a single simple polygon boundary (one interior face).
-- Each polygon vertex has an incident_edge pointing to the outgoing half-edge.
-- We do not create twin edges for the exterior face (not needed for our triangulation pipeline). The DCEL is extendable if you want to store more topology later.
-"""
-
-from __future__ import annotations
-from typing import Optional, List, Tuple
+import math
 
 
 class Vertex:
-    """A DCEL vertex."""
-
-    def __init__(self, x: float, y: float, idx: int) -> None:
-        self.x: float = float(x)
-        self.y: float = float(y)
-        self.incident_edge: Optional[HalfEdge] = None
-        self.idx: int = idx
-
-    def coords(self) -> Tuple[float, float]:
-        return (self.x, self.y)
-
-    def __repr__(self) -> str:
-        return f"V{self.idx}({self.x:.3f},{self.y:.3f})"
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.incident_half_edges = []
+        self.incident_edges_and_faces = []
 
 
 class HalfEdge:
-    """A half-edge in DCEL."""
-
-    def __init__(self) -> None:
-        self.origin: Optional[Vertex] = None
-        self.twin: Optional[HalfEdge] = None
-        self.next: Optional[HalfEdge] = None
-        self.prev: Optional[HalfEdge] = None
-        self.face: Optional[Face] = None
-
-    def __repr__(self) -> str:
-        o = self.origin.idx if self.origin else None
-        n = self.next.origin.idx if self.next and self.next.origin else None
-        return f"HE(origin={o}, next_origin={n})"
+    def __init__(self):
+        self.origin = None
+        self.twin = None
+        self.next = None
+        self.incident_face = None
+        self.prev = None
+        self.target = None
 
 
 class Face:
-    """A face in DCEL."""
-
-    def __init__(self, fid: int) -> None:
-        self.fid: int = fid
-        self.outer_component: Optional[HalfEdge] = None
-        self.inner_components: List[HalfEdge] = []
-
-    def __repr__(self) -> str:
-        return f"Face({self.fid})"
+    def __init__(self):
+        self.outer_half_edge = None
 
 
 class DCEL:
-    """Minimal DCEL implementation for a simple polygon."""
+    def __init__(self):
+        self.vertices = []
+        self.half_edges = []
+        self.faces = []
+        self.existing_lines = []
 
-    def __init__(self) -> None:
-        self.vertices: List[Vertex] = []
-        self.half_edges: List[HalfEdge] = []
-        self.faces: List[Face] = []
+    def add_vertex(self, x, y):
+        vertex = Vertex(x, y)
+        self.vertices.append(vertex)
+        return vertex
 
-    @staticmethod
-    def from_polygon(points: List[Tuple[float, float]]) -> DCEL:
-        dcel = DCEL()
-        n = len(points)
+    def add_edge(self, v1, v2):
+        self.existing_lines.append((v1, v2))
+        self.existing_lines.append((v2, v1))
 
-        for i, (x, y) in enumerate(points):
-            dcel.vertices.append(Vertex(x, y, i))
+        half_edge1 = HalfEdge()
+        half_edge2 = HalfEdge()
 
-        hes: List[HalfEdge] = [HalfEdge() for _ in range(n)]
-        for i in range(n):
-            he = hes[i]
-            he.origin = dcel.vertices[i]
-            dcel.vertices[i].incident_edge = he
-            he.next = hes[(i + 1) % n]
-            he.prev = hes[(i - 1) % n]
-            dcel.half_edges.append(he)
+        half_edge1.twin = half_edge2
+        half_edge2.twin = half_edge1
 
-        interior_face = Face(fid=0)
-        interior_face.outer_component = hes[0]
-        for he in hes:
-            he.face = interior_face
+        half_edge1.origin = v1
+        half_edge2.origin = v2
+        half_edge1.target = v2
+        half_edge2.target = v1
 
-        dcel.faces.append(interior_face)
-        return dcel
+        v1.incident_half_edges.append(half_edge1)
+        v2.incident_half_edges.append(half_edge2)
 
-    def boundary_vertex_indices(self) -> List[int]:
-        if not self.half_edges:
-            return []
-        start = self.half_edges[0]
-        res: List[int] = []
-        he: Optional[HalfEdge] = start
-        while he is not None:
-            if he.origin:
-                res.append(he.origin.idx)
-            he = he.next
-            if he is start:
+        self.half_edges.append(half_edge1)
+        self.half_edges.append(half_edge2)
+
+        return half_edge1, half_edge2
+
+    def add_face(self, outer_half_edge):
+        face = Face()
+        face.outer_half_edge = outer_half_edge
+
+        edge = outer_half_edge
+        while True:
+            edge.target.incident_edges_and_faces.append((face, edge))
+            edge.incident_face = face
+            edge = edge.next
+            if edge == outer_half_edge:
                 break
-        return res
 
-    def coords_list(self) -> List[Tuple[float, float]]:
-        return [v.coords() for v in self.vertices]
+        self.faces.append(face)
 
-    def __repr__(self) -> str:
-        return f"DCEL(V={len(self.vertices)}, HE={len(self.half_edges)}, F={len(self.faces)})"
+    def add_diagonal(self, v1, v2):
+        common_face_list = []
+        for x in v1.incident_edges_and_faces:
+            for y in v2.incident_edges_and_faces:
+                if x[0] is not None and y[0] is not None:
+                    if x[0] == y[0]:
+                        common_face_list.append(x)
+                        common_face_list.append(y)
+                        break
+
+        common_face = common_face_list[0][0]
+        temp_half_edge = common_face_list[0][1]
+        half_edge1, half_edge2 = self.add_edge(v1, v2)
+        half_edge2.next = temp_half_edge.next
+        half_edge2.next.prev = half_edge2
+        half_edge1.prev = temp_half_edge
+        temp_half_edge.next = half_edge1
+
+        new_face1 = Face()
+        new_face2 = Face()
+
+        new_face1.outer_half_edge = half_edge1
+        new_face2.outer_half_edge = half_edge2
+        looping_edge = half_edge2
+        while True:
+            looping_edge.incident_face = new_face2
+            looping_edge.target.incident_edges_and_faces.append(
+                (new_face2, looping_edge)
+            )
+            if looping_edge.target == v2:
+                break
+            looping_edge = looping_edge.next
+
+        half_edge1.next = looping_edge.next
+        half_edge1.next.prev = half_edge1
+        looping_edge.next = half_edge2
+        half_edge2.prev = looping_edge
+        looping_edge = half_edge1
+        while True:
+            looping_edge.incident_face = new_face1
+            looping_edge.target.incident_edges_and_faces.append(
+                (new_face1, looping_edge)
+            )
+            if looping_edge.target == v1:
+                break
+            looping_edge = looping_edge.next
+
+        self.faces.remove(common_face)
+        for v in self.vertices:
+            for temp in v.incident_edges_and_faces:
+                if temp[0] == common_face:
+                    v.incident_edges_and_faces.remove(temp)
+                    break
+
+        self.faces.append(new_face1)
+        self.faces.append(new_face2)
+
+    def construct_polygon(self, points):
+        dcel_vertices = []
+
+        for x, y in points:
+            dcel_vertices.append(self.add_vertex(x, y))
+
+        num_vertices = len(dcel_vertices)
+        first_edge1 = None
+        first_edge2 = None
+        prev_edge1 = None
+        prev_edge2 = None
+
+        for i in range(num_vertices):
+            v1 = dcel_vertices[i]
+            v2 = dcel_vertices[(i + 1) % num_vertices]
+            half_edge1, half_edge2 = self.add_edge(v1, v2)
+
+            if prev_edge1:
+                prev_edge1.next = half_edge1
+                half_edge1.prev = prev_edge1
+
+            if prev_edge2:
+                prev_edge2.next = half_edge2
+                half_edge2.prev = prev_edge2
+
+            if i == 0:
+                first_edge1 = half_edge1
+                first_edge2 = half_edge2
+
+            prev_edge1 = half_edge1
+            prev_edge2 = half_edge2
+
+        prev_edge1.next = first_edge1
+        prev_edge2.next = first_edge2
+        first_edge1.prev = prev_edge1
+        first_edge2.prev = prev_edge2
+
+        self.add_face(first_edge1)
+
+    def angle_between(self, v1, v2, v3):
+        vec_a = (v1.x - v2.x, v1.y - v2.y)
+        vec_b = (v3.x - v2.x, v3.y - v2.y)
+
+        angle_a = math.atan2(vec_a[1], vec_a[0])
+        angle_b = math.atan2(vec_b[1], vec_b[0])
+
+        angle_diff = math.degrees(angle_b - angle_a)
+        if angle_diff < 0:
+            angle_diff += 360
+
+        return angle_diff
+
+    def find_vertices(self):
+        start_vertices = []
+        end_vertices = []
+        min_cusp_vertices = []
+        max_cusp_vertices = []
+
+        for i, vertex in enumerate(self.vertices):
+            prev_vertex = self.vertices[i - 1]
+            next_vertex = self.vertices[(i + 1) % len(self.vertices)]
+
+            angle = self.angle_between(prev_vertex, vertex, next_vertex)
+
+            if prev_vertex.y < vertex.y and next_vertex.y < vertex.y and angle > 180:
+                start_vertices.append(vertex)
+            elif prev_vertex.y > vertex.y and next_vertex.y > vertex.y and angle > 180:
+                end_vertices.append(vertex)
+            elif prev_vertex.y < vertex.y and next_vertex.y < vertex.y and angle < 180:
+                max_cusp_vertices.append(vertex)
+            elif prev_vertex.y > vertex.y and next_vertex.y > vertex.y and angle < 180:
+                min_cusp_vertices.append(vertex)
+
+        return {
+            "start_vertices": start_vertices,
+            "end_vertices": end_vertices,
+            "min_cusp_vertices": min_cusp_vertices,
+            "max_cusp_vertices": max_cusp_vertices,
+        }
+
+    def display(self):
+        for vertex in self.vertices:
+            print(f"({vertex.x}, {vertex.y})")
+
+    def print_faces(self):
+        for face in self.faces:
+            if face.outer_half_edge:
+                half_edge = face.outer_half_edge
+                vertices = []
+                start_half_edge = half_edge
+                while True:
+                    origin_vertex = half_edge.origin
+                    vertices.append((origin_vertex.x, origin_vertex.y))
+                    half_edge = half_edge.next
+                    if half_edge == start_half_edge or half_edge is None:
+                        break
+                print(vertices)
