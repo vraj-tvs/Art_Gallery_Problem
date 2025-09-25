@@ -1,33 +1,4 @@
-# Core Python requirements for Computational Geometry project
-# Art Gallery Problem Implementation
+streamlit>=1.37
+matplotlib>=3.8
+numpy>=1.26
 
-# Core dependencies
-numpy>=1.24.0
-matplotlib>=3.7.0
-
-# Web framework
-flask>=2.3.0
-flask-cors>=4.0.0
-
-# Geometric operations and validation
-shapely>=2.0.0
-
-# Graph operations for dual graph construction
-networkx>=3.1.0
-
-# Progress bars and utilities
-tqdm>=4.65.0
-
-# Development and testing
-pytest>=7.4.0
-pytest-cov>=4.0.0  # for test coverage
-black>=23.0.0      # for code formatting
-flake8>=6.0.0      # for linting
-
-# Optional but recommended for development
-jupyter>=1.0.0     # for interactive development
-ipython>=8.0.0     # for enhanced REPL
-
-# Documentation (optional)
-sphinx>=6.0.0      # for documentation generation
-sphinx-rtd-theme>=1.2.0  # for documentation theme

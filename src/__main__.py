@@ -5,7 +5,7 @@
 # __main__.py - Calls controller.main() to launch the desktop app.
 #
 
-from controller import main
+from src.controller import main
 
 
 if __name__ == "__main__":

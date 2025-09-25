@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 
-# Single entry point to run the project from this folder.
+# Convenience launcher for the Art Gallery project.
 
 # GroupID-23 (22114047_22114081_22114098) - Khushal Agrawal, Rushit Pancholi and Vraj Tamkuwala
 # Date: 25 Sept, 2025
-# main.py - CLI to launch Streamlit web UI or Tkinter desktop UI.
+# run.py - Alternate launcher mirroring main.py.
 
 # Usage:
-#   - Desktop (Tkinter):  python main.py --desktop
-#   - Web (Streamlit):    python main.py --web [--port 8501]
-#
-
-from __future__ import annotations
+#   - Desktop (Tkinter):  python run.py --desktop
+#   - Web (Streamlit):    python run.py --web [--port 8501]# """
 
 import argparse
 import os
@@ -20,17 +17,21 @@ import sys
 
 
 def run_web_ui(port: int) -> int:
-    app_path = os.path.join(os.path.dirname(__file__), "src", "webui", "app.py")
+    """Launch the Streamlit app via the streamlit CLI."""
+    # Best to invoke streamlit via module to ensure same interpreter is used
+    app_path = os.path.join(os.path.dirname(__file__), "webui", "app.py")
 
+    # Optional pre-check for streamlit to give a nicer error
     try:
-        import streamlit  # type: ignore
+        import streamlit  # noqa: F401
     except Exception as exc:  # pragma: no cover
         print("Streamlit is not installed. Please install dependencies first:")
         print("  pip install -r ./requirements.txt")
         print(f"Details: {exc}")
         return 1
 
-    project_root = os.path.abspath(os.path.dirname(__file__))
+    # Run from project root so local imports resolve
+    repo_root = os.path.abspath(os.path.dirname(__file__))
     cmd = [
         sys.executable,
         "-m",
@@ -40,11 +41,13 @@ def run_web_ui(port: int) -> int:
         "--server.port",
         str(port),
     ]
-    return subprocess.call(cmd, cwd=project_root)
+    return subprocess.call(cmd, cwd=repo_root)
 
 
 def run_desktop_gui() -> int:
+    """Run the Tkinter-based desktop GUI directly."""
     try:
+        # Import inside to keep startup fast and avoid side effects before mode is chosen
         from src.controller import main as desktop_main
     except Exception as exc:  # pragma: no cover
         print(
@@ -80,8 +83,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
+
     if args.desktop:
         return run_desktop_gui()
+
+    # Default to web if neither flag provided
     return run_web_ui(port=args.port)
 
 
